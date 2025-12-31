@@ -1,5 +1,5 @@
 # Chat to PDF
-A smart document study assistant built with Next.js 16 and TypeScript. This application uses Retrieval-Augmented Generation (RAG) to allow users to upload PDF, DOCX, and PPTX files and ask questions in natural language. Powered by Google's Gemini AI and Pinecone Vector Database, it provides accurate, context-aware answers with support for Markdown and mathematical notation.
+A smart document study assistant built with Next.js 16 and TypeScript. This application uses Retrieval-Augmented Generation (RAG) to allow users to upload PDF, DOCX, and PPTX files and ask questions in natural language. Powered by Google's Gemini AI and Pinecone Vector Database, it provides accurate, context-aware answers with support for Markdown and mathematical notation. Still need it to draw tables
 
 ## 🚀 Features
 
