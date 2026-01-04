@@ -65,7 +65,7 @@ export default function Dashboard() {
   const router = useRouter();
   const supabase = createClient();
 
-  // 1. Check if user is at the bottom
+  // 1. Smart Scroll Logic: Only auto-scroll if user is near the bottom
   const handleScroll = () => {
     const node = chatContainerRef.current;
     if (node) {
@@ -77,7 +77,6 @@ export default function Dashboard() {
     }
   };
 
-  // 2. Only scroll if allowed
   useEffect(() => {
     if (shouldAutoScroll) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -118,7 +117,7 @@ export default function Dashboard() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-    setShouldAutoScroll(true); // Always force scroll on new message
+    setShouldAutoScroll(true); // Always snap to bottom on new message send
 
     try {
       const response = await fetch('/api/chat', {
@@ -217,8 +216,8 @@ export default function Dashboard() {
               );
             }
 
-            // REGEX FIX: Split by ||| allowing for surrounding newlines
-            const parts = m.content.split(/(?:\r?\n)*\|\|\|(?:\r?\n)*/).filter(part => part.trim() !== '');
+            // REGEX FIX: Split by ---SPLIT--- allowing for ANY whitespace/newlines around it
+            const parts = m.content.split(/\s*---SPLIT---\s*/).filter(part => part.trim() !== '');
             const bubbles = parts.length > 0 ? parts : [''];
 
             return (
