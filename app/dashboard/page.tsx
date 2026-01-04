@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
-import { useChat } from 'ai/react'; // <--- The magic hook for streaming
+import { useChat } from '@ai-sdk/react';
 import { 
   Upload, FileText, Send, Loader2, File, X, MessageSquare, 
   Menu, FileSpreadsheet, FileIcon 
@@ -13,7 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw'; // <--- Needed for <details> tags
+import rehypeRaw from 'rehype-raw'; 
 import 'katex/dist/katex.min.css';
 
 const FileItem = ({ name }: { name: string }) => {
@@ -259,3 +259,4 @@ export default function Dashboard() {
     </div>
   );
 }
+
