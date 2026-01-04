@@ -211,7 +211,7 @@ export default function Home() {
                 ) : (
                   <div className="prose prose-invert prose-sm max-w-none">
                     <ReactMarkdown
-                      remarkPlugins={[remarkMath]}
+                      remarkPlugins={[remarkMath, remarkGfm]}
                       rehypePlugins={[rehypeKatex]}
                     >
                       {m.content}
@@ -255,4 +255,5 @@ export default function Home() {
   );
 
 }
+
 
