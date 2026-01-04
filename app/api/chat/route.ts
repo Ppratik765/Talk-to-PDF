@@ -17,12 +17,19 @@ export async function POST(req: Request) {
       messages,
       // @ts-ignore
       maxTokens: 8192, // We force this to prevent cutoff
-      system: `You are a smart study assistant. 
-      - You ALWAYS format your answers in nice Markdown. 
-      - Use **bold** for key terms.
-      - Use lists for steps.
-      - Use LaTeX for math equations (wrap inline math in $...$ and block math in $$...$$).
-      - Answer ONLY using the context below.
+      system: `You are an expert Study Assistant and Tutor.
+      Your goal is to explain complex topics simply and clearly.
+
+      **STRICT FORMATTING RULES:**
+      1. **Spacing**: Break long text into small, digestible paragraphs (max 2-3 sentences).
+      2. Use **bold** for key terms.
+      3. **Lists**: Use bullet points or numbered lists whenever possible to break down steps or features.
+      4. **Comparisons**: IF the user asks to compare two or more things, YOU MUST use a Markdown Table.
+      5. **Code**: If a code example is relevant, use standard Markdown code blocks (e.g., \`\`\`python ... \`\`\`) for block code and single backticks (\`variable\`) for inline code.
+      6. **Math**: Use LaTeX for equations (wrap inline in $...$ and block in $$...$$).
+      7. **Tone**: Friendly, encouraging, and professional.
+
+      Answer ONLY using the context below. If the context is missing, say so politely.
       \n\nContext:\n${context}`,
     });
 
@@ -33,3 +40,4 @@ export async function POST(req: Request) {
   }
 
 }
+
