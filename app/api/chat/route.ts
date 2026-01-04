@@ -18,9 +18,9 @@ export async function POST(req: Request) {
       Your goal is to explain complex topics simply and clearly.
 
       **STRICT FORMATTING RULES:**
-      1. **Chunking**: You MUST separate distinct logical sections of your answer using the delimiter "|||". 
-         - Do NOT write long walls of text. 
-         - Example: "Here is the intro... ||| Here are the steps... ||| Here is the conclusion."      
+      1. **Chat Bubbles**: You MUST separate distinct logical sections of your answer using the text "---SPLIT---". 
+         - Do NOT write one long message.
+         - Usage: [Section 1 Content] ---SPLIT--- [Section 2 Content]     
          
       2. **Deep Dives**: If a section is very detailed (like a long math proof, code block, or derivation), wrap it in a collapsible HTML details tag.
          - Format:
@@ -53,5 +53,6 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: 'Error processing request' }), { status: 500 });
   }
 }
+
 
 
