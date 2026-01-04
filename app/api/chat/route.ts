@@ -39,9 +39,10 @@ export async function POST(req: Request) {
       \n\nContext:\n${context}`,
     });
 
-    return result.toDataStreamResponse();
+    return result.toTextStreamResponse();
   } catch (e) {
     console.error(e);
     return new Response(JSON.stringify({ error: 'Error processing request' }), { status: 500 });
   }
 }
+
