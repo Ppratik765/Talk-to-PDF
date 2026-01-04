@@ -60,7 +60,7 @@ export default function Home() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push('/');
   };
 
   const scrollToBottom = () => {
@@ -255,3 +255,4 @@ export default function Home() {
   );
 
 }
+
