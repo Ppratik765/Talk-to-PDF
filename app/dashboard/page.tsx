@@ -10,7 +10,8 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css'; // Import Math CSS
+import remarkGfm from 'remark-gfm';
+import 'katex/dist/katex.min.css';
 
 type Message = {
   id: string;
@@ -252,4 +253,5 @@ export default function Home() {
       </div>
     </div>
   );
+
 }
