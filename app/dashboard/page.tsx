@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
-import { useChat } from '@ai-sdk/react';
+// REMOVED: import { useChat } from '@ai-sdk/react'; 
 import { 
   Upload, FileText, Send, Loader2, File, X, MessageSquare, 
   Menu, FileSpreadsheet, FileIcon 
@@ -15,6 +15,13 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
+
+// Simple Message Type Definition
+type Message = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+};
 
 const FileItem = ({ name }: { name: string }) => {
   const isPdf = name.endsWith('.pdf');
@@ -42,18 +49,12 @@ const FileItem = ({ name }: { name: string }) => {
 };
 
 export default function Dashboard() {
-  // NUCLEAR FIX: We cast the config object to 'any' AND the result to 'any'.
-  // This completely disables TypeScript validation for this hook, allowing the build to pass.
-  const { messages, append, isLoading, setMessages } = useChat({
-    api: '/api/chat',
-    streamProtocol: 'text',
-    initialMessages: [
-      { id: '1', role: 'assistant', content: 'Hello! I am ready to study. Upload your documents and ask me anything.' }
-    ],
-  } as any) as any; 
-
-  // Manual input state
+  // Manual State Management
+  const [messages, setMessages] = useState<Message[]>([
+    { id: '1', role: 'assistant', content: 'Hello! I am ready to help you study. Upload your documents and ask me anything.' }
+  ]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   const [isUploading, setIsUploading] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
@@ -98,19 +99,54 @@ export default function Dashboard() {
     setIsUploading(false);
   };
 
-  // Custom submit handler using 'append'
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  // Manual Chat Handler with Streaming
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessage = input;
-    setInput(''); // Clear input immediately
-    
-    // 'append' is now typed as 'any', allowing this call to pass without error
-    await append({
-      role: 'user',
-      content: userMessage,
-    });
+    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [...messages, userMessage] }),
+      });
+
+      if (!response.body) throw new Error('No response body');
+
+      // Add placeholder for AI response
+      const aiMessageId = (Date.now() + 1).toString();
+      setMessages(prev => [...prev, { id: aiMessageId, role: 'assistant', content: '' }]);
+
+      // Stream Reader
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let accumulatedContent = '';
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        const chunkValue = decoder.decode(value, { stream: true });
+        accumulatedContent += chunkValue;
+
+        // Update UI with new chunk
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === aiMessageId ? { ...msg, content: accumulatedContent } : msg
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages(prev => [...prev, { id: 'error', role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -186,7 +222,7 @@ export default function Dashboard() {
 
         {/* MESSAGES LIST */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-          {messages.map((m: any) => { // Typed as any for safety here as well
+          {messages.map((m) => {
             if (m.role === 'user') {
               return (
                 <motion.div 
@@ -202,11 +238,14 @@ export default function Dashboard() {
               );
             }
 
-            const parts = m.content.split('|||').filter((part: string) => part.trim() !== '');
-            
+            // Split content by '|||' for chat bubbles
+            const parts = m.content.split('|||').filter(part => part.trim() !== '');
+            // If empty (just started streaming), show at least one bubble
+            const bubbles = parts.length > 0 ? parts : [''];
+
             return (
               <div key={m.id} className="space-y-4">
-                {parts.map((part: string, index: number) => (
+                {bubbles.map((part, index) => (
                   <motion.div 
                     key={`${m.id}-${index}`}
                     initial={{ opacity: 0, x: -20 }}
@@ -241,7 +280,7 @@ export default function Dashboard() {
             );
           })}
           
-          {isLoading && (
+          {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
             <div className="flex justify-start">
               <div className="bg-zinc-800 px-4 py-3 rounded-2xl rounded-bl-none border border-zinc-700">
                 <Loader2 className="animate-spin w-5 h-5 text-zinc-400" />
@@ -253,7 +292,7 @@ export default function Dashboard() {
 
         {/* INPUT AREA */}
         <div className="p-4 bg-zinc-950/80 backdrop-blur-lg border-t border-zinc-800/50">
-          <form onSubmit={handleFormSubmit} className="max-w-4xl mx-auto relative flex items-center gap-2">
+          <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative flex items-center gap-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
