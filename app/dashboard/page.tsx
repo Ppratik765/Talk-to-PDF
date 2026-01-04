@@ -16,7 +16,6 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 
-// ... (FileItem component remains exactly the same, no changes needed there) ...
 const FileItem = ({ name }: { name: string }) => {
   const isPdf = name.endsWith('.pdf');
   const isDoc = name.endsWith('.docx');
@@ -43,14 +42,19 @@ const FileItem = ({ name }: { name: string }) => {
 };
 
 export default function Dashboard() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
+  // CHANGED: We now destructure 'append' instead of 'input/handleSubmit'
+  // This avoids the Type Error by managing input state manually.
+  const { messages, append, isLoading, setMessages } = useChat({
     api: '/api/chat',
-    streamProtocol: 'text', // <--- ADD THIS LINE!
+    streamProtocol: 'text',
     initialMessages: [
       { id: '1', role: 'assistant', content: 'Hello! I am ready to study. Upload your documents and ask me anything.' }
     ],
   });
 
+  // Manual input state
+  const [input, setInput] = useState('');
+  
   const [isUploading, setIsUploading] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -92,6 +96,20 @@ export default function Dashboard() {
       }
     }
     setIsUploading(false);
+  };
+
+  // Custom submit handler using 'append'
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = input;
+    setInput(''); // Clear input immediately
+    
+    await append({
+      role: 'user',
+      content: userMessage,
+    });
   };
 
   return (
@@ -168,7 +186,6 @@ export default function Dashboard() {
         {/* MESSAGES LIST */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
           {messages.map((m) => {
-            // 1. If it's a user, render normally
             if (m.role === 'user') {
               return (
                 <motion.div 
@@ -184,8 +201,6 @@ export default function Dashboard() {
               );
             }
 
-            // 2. If it's the AI, split the content by '|||' and render multiple bubbles
-            // The split works dynamically as the stream arrives!
             const parts = m.content.split('|||').filter(part => part.trim() !== '');
             
             return (
@@ -237,10 +252,10 @@ export default function Dashboard() {
 
         {/* INPUT AREA */}
         <div className="p-4 bg-zinc-950/80 backdrop-blur-lg border-t border-zinc-800/50">
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative flex items-center gap-2">
+          <form onSubmit={handleFormSubmit} className="max-w-4xl mx-auto relative flex items-center gap-2">
             <input
               value={input}
-              onChange={handleInputChange}
+              onChange={(e) => setInput(e.target.value)}
               placeholder="Ask a question about your documents..."
               className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-xl pl-5 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-inner"
             />
