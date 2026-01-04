@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     const context = await getContext(lastMessage.content);
 
     const { text } = await generateText({
-      model: google('gemini-2.5-flash'),
+      model: google('gemma-3-27b-it'),
       messages,
       // @ts-ignore
       maxTokens: 8192, // We force this to prevent cutoff
@@ -31,4 +31,5 @@ export async function POST(req: Request) {
     console.error(e);
     return NextResponse.json({ error: 'Error processing request' }, { status: 500 });
   }
+
 }
