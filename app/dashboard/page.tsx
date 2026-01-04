@@ -1,8 +1,10 @@
 'use client';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
+import { useChat } from 'ai/react'; // <--- The magic hook for streaming
 import { 
   Upload, FileText, Send, Loader2, File, X, MessageSquare, 
   Menu, FileSpreadsheet, FileIcon 
@@ -11,13 +13,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw'; // <--- Needed for <details> tags
 import 'katex/dist/katex.min.css';
-
-type Message = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-};
 
 const FileItem = ({ name }: { name: string }) => {
   const isPdf = name.endsWith('.pdf');
@@ -44,12 +41,15 @@ const FileItem = ({ name }: { name: string }) => {
   );
 };
 
-export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: 'Hello! I am ready to study. Upload your documents and ask me anything.' }
-  ]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+export default function Dashboard() {
+  // useChat handles messages, input, loading, and streaming automatically!
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
+    api: '/api/chat',
+    initialMessages: [
+      { id: '1', role: 'assistant', content: 'Hello! I am ready to study. Upload your documents and ask me anything.' }
+    ],
+  });
+
   const [isUploading, setIsUploading] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -58,11 +58,6 @@ export default function Home() {
   const router = useRouter();
   const supabase = createClient();
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -70,6 +65,11 @@ export default function Home() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -91,32 +91,6 @@ export default function Home() {
       }
     }
     setIsUploading(false);
-  };
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
-      });
-
-      const data = await response.json();
-      const botMessage: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.content };
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error("Error", error);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (
@@ -169,25 +143,25 @@ export default function Home() {
         
         {/* HEADER */}
         <div className="h-16 border-b border-zinc-800/50 flex items-center px-6 justify-between bg-zinc-950/50 backdrop-blur-md sticky top-0 z-10">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
             {!isSidebarOpen && (
               <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400">
                 <Menu size={20} />
               </button>
             )}
-                <h1 className="font-semibold text-lg flex items-center gap-2">
-                <MessageSquare size={20} className="text-blue-500" /> 
-                Chat Assistant
-                </h1>
-            </div>
-            <div className="flex items-center gap-4">
-                <div className="text-xs text-zinc-500 font-mono bg-zinc-900 px-2 py-1 rounded border border-zinc-800">
-                    Model: Gemini 2.5 Flash
-                </div>
-                <button onClick={handleSignOut} className="text-sm text-red-400 hover:text-red-300">
-                    Sign Out
-                </button>
-            </div>
+            <h1 className="font-semibold text-lg flex items-center gap-2">
+              <MessageSquare size={20} className="text-blue-500" /> 
+              Chat Assistant
+            </h1>
+          </div>
+          <div className="flex items-center gap-4">
+             <div className="text-xs text-zinc-500 font-mono bg-zinc-900 px-2 py-1 rounded border border-zinc-800">
+                Model: Gemma-3 27B
+             </div>
+             <button onClick={handleSignOut} className="text-sm text-red-400 hover:text-red-300">
+                Sign Out
+             </button>
+          </div>
         </div>
 
         {/* MESSAGES LIST */}
@@ -208,24 +182,25 @@ export default function Home() {
                 </motion.div>
               );
             }
-        
+
             // 2. If it's the AI, split the content by '|||' and render multiple bubbles
+            // The split works dynamically as the stream arrives!
             const parts = m.content.split('|||').filter(part => part.trim() !== '');
             
             return (
-              <div key={m.id} className="space-y-4"> {/* Container for the group of bubbles */}
+              <div key={m.id} className="space-y-4">
                 {parts.map((part, index) => (
                   <motion.div 
-                    key={`${m.id}-${index}`} // Unique key for each sub-bubble
+                    key={`${m.id}-${index}`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }} // Stagger effect: bubbles appear one by one
+                    transition={{ delay: index * 0.1 }}
                     className="flex justify-start"
                   >
                     <div className={`
                       max-w-[85%] md:max-w-[70%] p-5 rounded-2xl shadow-sm 
                       bg-zinc-800 text-zinc-200 border border-zinc-700 
-                      ${index === 0 ? 'rounded-bl-none' : 'ml-0'} // Only first bubble has the "chat tail"
+                      ${index === 0 ? 'rounded-bl-none' : 'ml-0'}
                     `}>
                       <div className="prose prose-invert prose-sm max-w-none 
                         prose-p:leading-relaxed prose-p:mb-4 
@@ -237,7 +212,8 @@ export default function Home() {
                       ">
                         <ReactMarkdown
                           remarkPlugins={[remarkMath, remarkGfm]}
-                          rehypePlugins={[rehypeKatex]}
+                          // rehypeRaw is ESSENTIAL for rendering <details> tags
+                          rehypePlugins={[rehypeKatex, rehypeRaw]} 
                         >
                           {part}
                         </ReactMarkdown>
@@ -251,6 +227,8 @@ export default function Home() {
           
           {isLoading && (
             <div className="flex justify-start">
+               {/* This loader is optional now since the text streams immediately, 
+                   but good to keep for the initial connection delay */}
               <div className="bg-zinc-800 px-4 py-3 rounded-2xl rounded-bl-none border border-zinc-700">
                 <Loader2 className="animate-spin w-5 h-5 text-zinc-400" />
               </div>
@@ -261,10 +239,10 @@ export default function Home() {
 
         {/* INPUT AREA */}
         <div className="p-4 bg-zinc-950/80 backdrop-blur-lg border-t border-zinc-800/50">
-          <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative flex items-center gap-2">
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative flex items-center gap-2">
             <input
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
               placeholder="Ask a question about your documents..."
               className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-xl pl-5 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-inner"
             />
@@ -280,8 +258,4 @@ export default function Home() {
       </div>
     </div>
   );
-
 }
-
-
-
