@@ -1,242 +1,168 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Upload, FileText, Send, Loader2, File, X, MessageSquare, 
-  Menu, FileSpreadsheet, FileIcon 
-} from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css'; // Import Math CSS
+import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { ArrowRight, Check, Sparkles, Zap, Shield, Mail } from 'lucide-react';
 
-type Message = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
+const fadeInUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
 };
 
-const FileItem = ({ name }: { name: string }) => {
-  const isPdf = name.endsWith('.pdf');
-  const isDoc = name.endsWith('.docx');
-  const isPpt = name.endsWith('.pptx');
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl border border-zinc-700/50 hover:bg-zinc-800 transition-colors group"
-    >
-      <div className={`p-2 rounded-lg ${
-        isPdf ? 'bg-red-500/20 text-red-400' :
-        isDoc ? 'bg-blue-500/20 text-blue-400' :
-        isPpt ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-500/20 text-zinc-400'
-      }`}>
-        {isPdf ? <FileText size={18} /> : 
-         isDoc ? <FileIcon size={18} /> : 
-         isPpt ? <FileSpreadsheet size={18} /> : <File size={18} />}
-      </div>
-      <span className="text-sm font-medium text-zinc-300 truncate w-32">{name}</span>
-    </motion.div>
-  );
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2
+    }
+  }
 };
 
-export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: 'Hello! I am ready to study. Upload your documents and ask me anything.' }
-  ]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [files, setFiles] = useState<string[]>([]);
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
-  
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    setIsUploading(true);
-
-    const newFiles = Array.from(e.target.files);
-    
-    for (const file of newFiles) {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      try {
-        const res = await fetch('/api/ingest', { method: 'POST', body: formData });
-        if (res.ok) {
-          setFiles((prev) => [...prev, file.name]);
-        }
-      } catch (error) {
-        console.error("Upload failed", error);
-      }
-    }
-    setIsUploading(false);
-  };
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
-      });
-
-      const data = await response.json();
-      const botMessage: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.content };
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error("Error", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+export default function LandingPage() {
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
+    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-blue-500/30">
       
-      {/* SIDEBAR */}
-      <AnimatePresence mode="wait">
-        {isSidebarOpen && (
-          <motion.div 
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 300, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            className="h-full border-r border-zinc-800 bg-zinc-900/50 backdrop-blur-xl flex flex-col hidden md:flex"
-          >
-            <div className="p-6 border-b border-zinc-800 flex justify-between items-center">
-              <span className="font-bold text-xl bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-                My Notes
-              </span>
-              <button onClick={() => setSidebarOpen(false)} className="text-zinc-500 hover:text-white">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {files.length === 0 ? (
-                <div className="text-center mt-10 text-zinc-600">
-                  <span className="text-sm">No files uploaded yet.</span>
-                </div>
-              ) : (
-                files.map((f, i) => <FileItem key={i} name={f} />)
-              )}
-            </div>
-
-            <div className="p-4 border-t border-zinc-800">
-              <label className={`
-                flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold cursor-pointer transition-all
-                ${isUploading ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20'}
-              `}>
-                {isUploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
-                {isUploading ? 'Processing...' : 'Upload Notes'}
-                <input type="file" multiple accept=".pdf,.docx,.pptx" className="hidden" onChange={handleFileUpload} disabled={isUploading}/>
-              </label>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* MAIN CHAT AREA */}
-      <div className="flex-1 flex flex-col relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-zinc-950 to-zinc-950">
-        
-        {/* HEADER */}
-        <div className="h-16 border-b border-zinc-800/50 flex items-center px-6 justify-between bg-zinc-950/50 backdrop-blur-md sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            {!isSidebarOpen && (
-              <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400">
-                <Menu size={20} />
-              </button>
-            )}
-            <h1 className="font-semibold text-lg flex items-center gap-2">
-              <MessageSquare size={20} className="text-blue-500" /> 
-              Chat Assistant
-            </h1>
+      {/* NAVIGATION */}
+      <nav className="fixed top-0 w-full z-50 backdrop-blur-lg border-b border-white/5 bg-zinc-950/50">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Talk-to-PDF
           </div>
-          <div className="text-xs text-zinc-500 font-mono bg-zinc-900 px-2 py-1 rounded border border-zinc-800">
-            Model: Gemini 2.5 Flash
+          <div className="flex gap-4">
+            {['Login', 'Signup', 'Contact', 'Pricing'].map((item) => (
+              <Link 
+                key={item}
+                href={item === 'Contact' ? '#contact' : item === 'Pricing' ? '#pricing' : `/${item.toLowerCase().replace(' ', '')}`}
+              >
+                <button className="px-6 py-2 border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 hover:border-zinc-500 transition-all font-medium text-sm rounded-none uppercase tracking-wide">
+                  {item}
+                </button>
+              </Link>
+            ))}
           </div>
         </div>
+      </nav>
 
-        {/* MESSAGES LIST */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-          {messages.map((m) => (
+      {/* HERO SECTION */}
+      <section className="pt-40 pb-20 px-6 overflow-hidden relative">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] -z-10" />
+        
+        <motion.div 
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer}
+          className="max-w-4xl mx-auto text-center space-y-8"
+        >
+          <motion.h1 variants={fadeInUp} className="text-6xl md:text-8xl font-bold tracking-tight">
+            Chat with your <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400 animate-pulse">
+              Documents.
+            </span>
+          </motion.h1>
+          <motion.p variants={fadeInUp} className="text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+            Transform static PDFs into dynamic conversations. Built with Gemini AI for lightning-fast, context-aware answers.
+          </motion.p>
+          <motion.div variants={fadeInUp} className="flex justify-center gap-4">
+            <Link href="/signup">
+              <button className="px-8 py-4 bg-white text-black font-bold text-lg hover:scale-105 transition-transform rounded-none flex items-center gap-2">
+                Get Started <ArrowRight size={20} />
+              </button>
+            </Link>
+          </motion.div>
+        </motion.div>
+      </section>
+
+      {/* SCROLL INSTRUCTIONS */}
+      <section className="py-32 px-6 bg-zinc-900/30">
+        <div className="max-w-5xl mx-auto space-y-32">
+          {[
+            { title: "Upload", desc: "Drag & drop your PDFs, Docs, or PPTs.", icon: <Zap className="text-yellow-400" size={40} /> },
+            { title: "Analyze", desc: "Our AI vectorizes your content securely.", icon: <Shield className="text-emerald-400" size={40} /> },
+            { title: "Chat", desc: "Ask anything and get instant answers.", icon: <Sparkles className="text-purple-400" size={40} /> }
+          ].map((step, i) => (
             <motion.div 
-              key={m.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              key={i}
+              initial={{ opacity: 0, x: i % 2 === 0 ? -50 : 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.8 }}
+              className={`flex items-center gap-12 ${i % 2 !== 0 ? 'flex-row-reverse text-right' : ''}`}
             >
-              <div className={`
-                max-w-[85%] md:max-w-[70%] p-4 rounded-2xl shadow-sm
-                ${m.role === 'user' 
-                  ? 'bg-blue-600 text-white rounded-br-none' 
-                  : 'bg-zinc-800 text-zinc-200 border border-zinc-700 rounded-bl-none'}
-              `}>
-                {/* MARKDOWN RENDERER */}
-                {m.role === 'user' ? (
-                  <p className="whitespace-pre-wrap">{m.content}</p>
-                ) : (
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                    >
-                      {m.content}
-                    </ReactMarkdown>
-                  </div>
-                )}
+              <div className="flex-1 space-y-4">
+                <div className={`w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mb-4 border border-zinc-700 ${i % 2 !== 0 ? 'ml-auto' : ''}`}>
+                  {step.icon}
+                </div>
+                <h3 className="text-4xl font-bold text-white">{step.title}</h3>
+                <p className="text-xl text-zinc-400">{step.desc}</p>
+              </div>
+              <div className="flex-1 h-64 bg-zinc-800/50 rounded-3xl border border-zinc-700/50 backdrop-blur-sm flex items-center justify-center relative overflow-hidden group">
+                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 group-hover:opacity-100 transition-opacity" />
+                 <span className="text-9xl font-black text-zinc-800 select-none opacity-50">{i + 1}</span>
               </div>
             </motion.div>
           ))}
-          
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-zinc-800 px-4 py-3 rounded-2xl rounded-bl-none border border-zinc-700">
-                <Loader2 className="animate-spin w-5 h-5 text-zinc-400" />
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
         </div>
+      </section>
 
-        {/* INPUT AREA */}
-        <div className="p-4 bg-zinc-950/80 backdrop-blur-lg border-t border-zinc-800/50">
-          <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative flex items-center gap-2">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question about your documents..."
-              className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-xl pl-5 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-inner"
-            />
-            <button 
-              type="submit" 
-              disabled={isLoading || !input.trim()}
-              className="absolute right-2 p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 disabled:bg-zinc-700 transition-all"
-            >
-              <Send size={18} />
-            </button>
-          </form>
+      {/* PRICING */}
+      <section id="pricing" className="py-32 px-6">
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={staggerContainer}
+          className="max-w-6xl mx-auto"
+        >
+          <h2 className="text-4xl font-bold text-center mb-16">Simple Pricing</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { name: "Free", price: "$0", features: ["10 PDF uploads", "Basic Chat Model", "Community Support"] },
+              { name: "Hobbyist", price: "$9", features: ["Unlimited uploads", "Faster Responses", "Email Support", "Priority Queue"] },
+              { name: "Professional", price: "$29", features: ["Team Collaboration", "API Access", "24/7 Support", "Custom Models", "SSO"] }
+            ].map((plan, i) => (
+              <motion.div 
+                key={i}
+                variants={fadeInUp}
+                className={`p-8 bg-zinc-900 border ${i === 1 ? 'border-blue-500 shadow-2xl shadow-blue-900/20 scale-105 z-10' : 'border-zinc-800'} relative`}
+              >
+                {i === 1 && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-500 text-xs font-bold px-3 py-1 uppercase tracking-wider">Popular</div>}
+                <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
+                <div className="text-4xl font-bold mb-6">{plan.price}<span className="text-base font-normal text-zinc-500">/mo</span></div>
+                <ul className="space-y-4 mb-8">
+                  {plan.features.map((f, j) => (
+                    <li key={j} className="flex items-center gap-3 text-zinc-400 text-sm">
+                      <Check size={16} className="text-blue-500" /> {f}
+                    </li>
+                  ))}
+                </ul>
+                <button className={`w-full py-3 font-semibold transition-colors ${i === 1 ? 'bg-blue-600 hover:bg-blue-500' : 'bg-zinc-800 hover:bg-zinc-700'}`}>
+                  Choose Plan
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* CONTACT */}
+      <section id="contact" className="py-32 px-6 bg-zinc-900 border-t border-zinc-800">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-3xl font-bold mb-8">Get in Touch</h2>
+          <div className="p-8 border border-zinc-700 bg-zinc-950 flex flex-col items-center gap-4">
+             <Mail size={32} className="text-zinc-500" />
+             <p className="text-zinc-400">Questions? Bugs? Feature requests?</p>
+             <a href="mailto:hello@talktopdf.com" className="text-2xl font-mono text-blue-400 hover:underline">
+               hello@talktopdf.com
+             </a>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="py-8 text-center text-zinc-600 text-sm">
+        © 2024 Talk-to-PDF. All rights reserved.
+      </footer>
     </div>
   );
 }
