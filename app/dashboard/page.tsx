@@ -13,9 +13,10 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw'; 
+import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 
+// ... (FileItem component remains exactly the same, no changes needed there) ...
 const FileItem = ({ name }: { name: string }) => {
   const isPdf = name.endsWith('.pdf');
   const isDoc = name.endsWith('.docx');
@@ -42,9 +43,9 @@ const FileItem = ({ name }: { name: string }) => {
 };
 
 export default function Dashboard() {
-  // useChat handles messages, input, loading, and streaming automatically!
   const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
     api: '/api/chat',
+    streamProtocol: 'text', // <--- ADD THIS LINE!
     initialMessages: [
       { id: '1', role: 'assistant', content: 'Hello! I am ready to study. Upload your documents and ask me anything.' }
     ],
@@ -212,7 +213,6 @@ export default function Dashboard() {
                       ">
                         <ReactMarkdown
                           remarkPlugins={[remarkMath, remarkGfm]}
-                          // rehypeRaw is ESSENTIAL for rendering <details> tags
                           rehypePlugins={[rehypeKatex, rehypeRaw]} 
                         >
                           {part}
@@ -227,8 +227,6 @@ export default function Dashboard() {
           
           {isLoading && (
             <div className="flex justify-start">
-               {/* This loader is optional now since the text streams immediately, 
-                   but good to keep for the initial connection delay */}
               <div className="bg-zinc-800 px-4 py-3 rounded-2xl rounded-bl-none border border-zinc-700">
                 <Loader2 className="animate-spin w-5 h-5 text-zinc-400" />
               </div>
@@ -259,4 +257,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
