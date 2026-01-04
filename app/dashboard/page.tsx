@@ -192,35 +192,62 @@ export default function Home() {
 
         {/* MESSAGES LIST */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-          {messages.map((m) => (
-            <motion.div 
-              key={m.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`
-                max-w-[85%] md:max-w-[70%] p-4 rounded-2xl shadow-sm
-                ${m.role === 'user' 
-                  ? 'bg-blue-600 text-white rounded-br-none' 
-                  : 'bg-zinc-800 text-zinc-200 border border-zinc-700 rounded-bl-none'}
-              `}>
-                {/* MARKDOWN RENDERER */}
-                {m.role === 'user' ? (
-                  <p className="whitespace-pre-wrap">{m.content}</p>
-                ) : (
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkMath, remarkGfm]}
-                      rehypePlugins={[rehypeKatex]}
-                    >
-                      {m.content}
-                    </ReactMarkdown>
+          {messages.map((m) => {
+            // 1. If it's a user, render normally
+            if (m.role === 'user') {
+              return (
+                <motion.div 
+                  key={m.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-end"
+                >
+                  <div className="max-w-[85%] md:max-w-[70%] p-4 rounded-2xl shadow-sm bg-blue-600 text-white rounded-br-none">
+                    <p className="whitespace-pre-wrap">{m.content}</p>
                   </div>
-                )}
+                </motion.div>
+              );
+            }
+        
+            // 2. If it's the AI, split the content by '|||' and render multiple bubbles
+            const parts = m.content.split('|||').filter(part => part.trim() !== '');
+            
+            return (
+              <div key={m.id} className="space-y-4"> {/* Container for the group of bubbles */}
+                {parts.map((part, index) => (
+                  <motion.div 
+                    key={`${m.id}-${index}`} // Unique key for each sub-bubble
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }} // Stagger effect: bubbles appear one by one
+                    className="flex justify-start"
+                  >
+                    <div className={`
+                      max-w-[85%] md:max-w-[70%] p-5 rounded-2xl shadow-sm 
+                      bg-zinc-800 text-zinc-200 border border-zinc-700 
+                      ${index === 0 ? 'rounded-bl-none' : 'ml-0'} // Only first bubble has the "chat tail"
+                    `}>
+                      <div className="prose prose-invert prose-sm max-w-none 
+                        prose-p:leading-relaxed prose-p:mb-4 
+                        prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-700 
+                        prose-code:text-blue-300 prose-code:bg-zinc-900/50 prose-code:px-1 prose-code:rounded
+                        prose-table:border-collapse prose-table:border prose-table:border-zinc-700
+                        prose-th:bg-zinc-900 prose-th:p-3 prose-th:border prose-th:border-zinc-700
+                        prose-td:p-3 prose-td:border prose-td:border-zinc-700
+                      ">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkMath, remarkGfm]}
+                          rehypePlugins={[rehypeKatex]}
+                        >
+                          {part}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-            </motion.div>
-          ))}
+            );
+          })}
           
           {isLoading && (
             <div className="flex justify-start">
@@ -255,5 +282,6 @@ export default function Home() {
   );
 
 }
+
 
 
