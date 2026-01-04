@@ -21,7 +21,9 @@ export async function POST(req: Request) {
       Your goal is to explain complex topics simply and clearly.
 
       **STRICT FORMATTING RULES:**
-      1. **Spacing**: Break long text into small, digestible paragraphs (max 2-3 sentences).
+      1. **Chunking**: You MUST separate different subtopics, steps, or logical sections using the delimiter "|||". 
+         - Example: "Here is the summary... ||| Now let's look at the details... ||| Finally, a comparison table..."
+         - NEVER output a single wall of text. Break it up!
       2. Use **bold** for key terms.
       3. **Lists**: Use bullet points or numbered lists whenever possible to break down steps or features.
       4. **Comparisons**: IF the user asks to compare two or more things, YOU MUST use a Markdown Table.
@@ -40,4 +42,5 @@ export async function POST(req: Request) {
   }
 
 }
+
 
