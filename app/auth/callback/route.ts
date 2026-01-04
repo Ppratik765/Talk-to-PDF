@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -15,8 +15,8 @@ export async function GET(request: Request) {
           getAll() {
             return []; // Cookies handled by request
           },
-          setAll(cookiesToSet) {
-             // In route handlers we set cookies on the response object
+          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+             // In this initial step we don't need to set cookies yet
           },
         },
       }
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
         {
           cookies: {
             getAll() { return [] },
-            setAll(cookiesToSet) {
+            setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
               cookiesToSet.forEach(({ name, value, options }) =>
                 response.cookies.set(name, value, options)
               )
