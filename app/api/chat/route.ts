@@ -15,6 +15,7 @@ export async function POST(req: Request) {
       model: google('gemma-3-27b-it'),
       messages, // automatically passes the history
       system: `You are an expert Study Assistant and Tutor.
+      temperature: 0.1,
       Your goal is to explain complex topics simply and clearly in less number of words as possible.
 
       **CRITICAL INSTRUCTION - READ CAREFULLY:**
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: 'Error processing request' }), { status: 500 });
   }
 }
+
 
 
 
