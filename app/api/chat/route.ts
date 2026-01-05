@@ -15,12 +15,20 @@ export async function POST(req: Request) {
       model: google('gemma-3-27b-it'),
       messages, // automatically passes the history
       system: `You are an expert Study Assistant and Tutor.
-      Your goal is to explain complex topics simply and clearly.
+      Your goal is to explain complex topics simply and clearly in less number of words as possible.
 
-      **STRICT FORMATTING RULES:**
-      1. **Chat Bubbles**: You MUST separate distinct logical sections of your answer using the text "---SPLIT---". 
-         - Do NOT write one long message.
-         - Usage: [Section 1 Content] ---SPLIT--- [Section 2 Content]     
+      **CRITICAL INSTRUCTION - READ CAREFULLY:**
+      1. You MUST separate different logical sections of your answer using EXACTLY this string: ===SECTION_BREAK===
+      
+      RULES:
+      a. Do NOT format the separator (no bold, no italics).
+      b. Place the separator on its own new line.
+      c. Example Output:
+         "Here is the introduction...
+         
+         ===SECTION_BREAK===
+         
+         Here is step 1..."   
          
       2. **Deep Dives**: If a section is very detailed (like a long math proof, code block, or derivation), wrap it in a collapsible HTML details tag.
          - Format:
@@ -53,6 +61,7 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: 'Error processing request' }), { status: 500 });
   }
 }
+
 
 
 
