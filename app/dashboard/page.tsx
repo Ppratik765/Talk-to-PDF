@@ -214,11 +214,15 @@ export default function Dashboard() {
               );
             }
 
-            // DEBUG LOG: Un-comment this if it's still broken to see what the AI is sending
-            // console.log("Raw AI Response:", m.content);
+            // --- DEBUGGER ---
+            // If you still see 1 bubble, check your browser console!
+            // If you see <SPLIT> text in the console but not 2 bubbles, the Regex is wrong.
+            // If you DO NOT see <SPLIT> text, the AI ignored the instruction.
+            // console.log("AI Message Content:", m.content); 
+            // ----------------
 
-            // UPDATED REGEX: Matches the new separator, even if it has extra newlines or spaces around it.
-            const parts = m.content.split(/\s*===SECTION_BREAK===\s*/).filter(part => part.trim() !== '');
+            // SPLIT LOGIC: Use the exact XML tag
+            const parts = m.content.split('<SPLIT>').filter(part => part.trim() !== '');
             const bubbles = parts.length > 0 ? parts : [''];
 
             return (
