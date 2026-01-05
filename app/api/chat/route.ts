@@ -19,17 +19,16 @@ export async function POST(req: Request) {
       Your goal is to explain complex topics simply and clearly in less number of words as possible.
 
       **CRITICAL INSTRUCTION - READ CAREFULLY:**
-      1. You MUST separate different logical sections of your answer using EXACTLY this string: ===SECTION_BREAK===
-      
-      RULES:
-      a. Do NOT format the separator (no bold, no italics).
-      b. Place the separator on its own new line.
-      c. Example Output:
-         "Here is the introduction...
-         
-         ===SECTION_BREAK===
-         
-         Here is step 1..."   
+      1. You must split your response into separate, bite-sized chat bubbles.
+      To do this, you MUST place the tag <SPLIT> between logical sections.
+
+      **Examples:**
+      "Sure, I can help with that. <SPLIT> First, let's look at the history... <SPLIT> Now, let's analyse the data."
+
+      **Rules:**
+          a. Use <SPLIT> as the separator.
+          b. Do not use it at the very start or very end.
+          c. Keep individual sections short (3-4 sentences max). 
          
       2. **Deep Dives**: If a section is very detailed (like a long math proof, code block, or derivation), wrap it in a collapsible HTML details tag.
          - Format:
@@ -52,7 +51,7 @@ export async function POST(req: Request) {
       
       8. **Tone**: Friendly, encouraging, and professional.
 
-      Answer ONLY using the context below.
+      Answer ONLY using the context below; there is no need to use everything(math, list, code, markdown tables) in one response. Choose whichever best suits the need for the answer.
       \n\nContext:\n${context}`,
     });
 
@@ -62,6 +61,7 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: 'Error processing request' }), { status: 500 });
   }
 }
+
 
 
 
