@@ -56,7 +56,7 @@ export default function Dashboard() {
   const [files, setFiles] = useState<string[]>([]);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   
-  // SCROLL LOGIC STATE
+  // SCROLL LOGIC
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -65,12 +65,10 @@ export default function Dashboard() {
   const router = useRouter();
   const supabase = createClient();
 
-  // 1. Smart Scroll Logic: Only auto-scroll if user is near the bottom
   const handleScroll = () => {
     const node = chatContainerRef.current;
     if (node) {
       const { scrollTop, scrollHeight, clientHeight } = node;
-      // If user is within 100px of the bottom, we count it as "at bottom"
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
       setShouldAutoScroll(isAtBottom);
       setShowScrollButton(!isAtBottom);
@@ -117,7 +115,7 @@ export default function Dashboard() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-    setShouldAutoScroll(true); // Always snap to bottom on new message send
+    setShouldAutoScroll(true);
 
     try {
       const response = await fetch('/api/chat', {
@@ -199,7 +197,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* MESSAGES LIST with Smart Scroll */}
+        {/* MESSAGES LIST */}
         <div 
           ref={chatContainerRef} 
           onScroll={handleScroll}
@@ -216,8 +214,11 @@ export default function Dashboard() {
               );
             }
 
-            // REGEX FIX: Split by ---SPLIT--- allowing for ANY whitespace/newlines around it
-            const parts = m.content.split(/\s*---SPLIT---\s*/).filter(part => part.trim() !== '');
+            // DEBUG LOG: Un-comment this if it's still broken to see what the AI is sending
+            // console.log("Raw AI Response:", m.content);
+
+            // UPDATED REGEX: Matches the new separator, even if it has extra newlines or spaces around it.
+            const parts = m.content.split(/\s*===SECTION_BREAK===\s*/).filter(part => part.trim() !== '');
             const bubbles = parts.length > 0 ? parts : [''];
 
             return (
@@ -246,7 +247,6 @@ export default function Dashboard() {
           )}
           <div ref={messagesEndRef} />
           
-          {/* Floating Scroll Button */}
           <AnimatePresence>
             {showScrollButton && (
               <motion.button
