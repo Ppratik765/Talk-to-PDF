@@ -14,8 +14,10 @@ export async function POST(req: Request) {
     const result = streamText({
       model: google('gemma-3-27b-it'),
       messages, // automatically passes the history
-      system: `You are an expert Study Assistant and Tutor.
       temperature: 0.1,
+      system: `You are an expert Study Assistant and Tutor.
+      Answer ONLY using the context below; there is no need to use everything(math, list, code, markdown tables) in one response. Choose whichever best suits the need for the answer.
+      \n\nContext:\n${context}
       Your goal is to explain complex topics simply and clearly in less number of words as possible.
 
       **CRITICAL INSTRUCTION - READ CAREFULLY:**
@@ -35,7 +37,7 @@ export async function POST(req: Request) {
            <details>
            <summary>Click to view proof/code</summary>
            
-           (Put your Markdown/Math content here. Ensure there is a blank line above this line)
+           (Put your Markdown/Math content here. Ensure there is a blank line above this line.
            
            </details>
            
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: 'Error processing request' }), { status: 500 });
   }
 }
+
 
 
 
