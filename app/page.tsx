@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Check, Sparkles, Zap, Shield, Mail } from 'lucide-react';
+import { ArrowRight, Zap, Shield, Sparkles, Check, Mail } from 'lucide-react';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 40 },
@@ -30,16 +30,22 @@ export default function LandingPage() {
             Talk-to-PDF
           </div>
           <div className="flex gap-4">
-            {['Login', 'Signup', 'Contact', 'Pricing'].map((item) => (
+            {['Contact', 'Pricing'].map((item) => (
               <Link 
                 key={item}
-                href={item === 'Contact' ? '#contact' : item === 'Pricing' ? '#pricing' : `/${item.toLowerCase().replace(' ', '')}`}
+                href={item === 'Contact' ? '#contact' : item === 'Pricing' ? '#pricing' : `/${item.toLowerCase()}`}
               >
                 <button className="px-6 py-2 border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 hover:border-zinc-500 transition-all font-medium text-sm rounded-none uppercase tracking-wide">
                   {item}
                 </button>
               </Link>
             ))}
+            {/* Direct Link to App */}
+            <Link href="/dashboard">
+                <button className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white transition-all font-medium text-sm rounded-none uppercase tracking-wide">
+                  Open App
+                </button>
+            </Link>
           </div>
         </div>
       </nav>
@@ -64,7 +70,8 @@ export default function LandingPage() {
             Transform static PDFs into dynamic conversations. Built with Gemini AI for lightning-fast, context-aware answers.
           </motion.p>
           <motion.div variants={fadeInUp} className="flex justify-center gap-4">
-            <Link href="/signup">
+            {/* CHANGED: Links directly to dashboard */}
+            <Link href="/dashboard">
               <button className="px-8 py-4 bg-white text-black font-bold text-lg hover:scale-105 transition-transform rounded-none flex items-center gap-2">
                 Get Started <ArrowRight size={20} />
               </button>

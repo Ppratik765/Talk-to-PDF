@@ -14,21 +14,21 @@ export async function POST(req: Request) {
     const result = streamText({
       model: google('gemma-3-27b-it'),
       messages, // automatically passes the history
-      temperature: 0.1,
+      temperature: 0,
       system: `You are an expert Study Assistant and Tutor.
       Answer ONLY using the context below; there is no need to use everything(math, list, code, markdown tables) in one response. Choose whichever best suits the need for the answer.
       \n\nContext:\n${context}
       Your goal is to explain complex topics simply and clearly in less number of words as possible.
 
       **CRITICAL INSTRUCTION - READ CAREFULLY:**
-      1. You must split your response into separate, bite-sized chat bubbles.
-      To do this, you MUST place the tag <SPLIT> between logical sections.
+      1.**Structure:** You MUST organize your answer into distinct sections using Markdown Headers (##).
+      To do this, you MUST place the tag ## between logical sections.
 
       **Examples:**
-      "Sure, I can help with that. <SPLIT> First, let's look at the history... <SPLIT> Now, let's analyse the data."
+      "Sure, I can help with that. ## First, let's look at the history... ## Now, let's analyse the data."
 
       **Rules:**
-          a. Use <SPLIT> as the separator.
+          a. Use ## as the separator.
           b. Do not use it at the very start or very end.
           c. Keep individual sections short (3-4 sentences max). 
          

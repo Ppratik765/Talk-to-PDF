@@ -3,10 +3,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
 import { 
   Upload, FileText, Send, Loader2, File, X, MessageSquare, 
-  Menu, FileSpreadsheet, FileIcon, ArrowDown 
+  Menu, FileSpreadsheet, FileIcon, ArrowDown, LogOut 
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -63,7 +62,6 @@ export default function Dashboard() {
   const [showScrollButton, setShowScrollButton] = useState(false);
 
   const router = useRouter();
-  const supabase = createClient();
 
   const handleScroll = () => {
     const node = chatContainerRef.current;
@@ -86,8 +84,8 @@ export default function Dashboard() {
     setShouldAutoScroll(true);
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
+  const handleBack = () => {
+    // Simply go back to the landing page
     router.push('/');
   };
 
@@ -193,7 +191,10 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-4">
              <div className="text-xs text-zinc-500 font-mono bg-zinc-900 px-2 py-1 rounded border border-zinc-800">Model: Gemma-3 27B</div>
-             <button onClick={handleSignOut} className="text-sm text-red-400 hover:text-red-300">Sign Out</button>
+             {/* REPLACED "Sign Out" with "Go Back" */}
+             <button onClick={handleBack} className="text-sm text-zinc-400 hover:text-white flex items-center gap-1">
+                <LogOut size={16} /> Go Back
+             </button>
           </div>
         </div>
 
@@ -214,15 +215,8 @@ export default function Dashboard() {
               );
             }
 
-            // --- DEBUGGER ---
-            // If you still see 1 bubble, check your browser console!
-            // If you see <SPLIT> text in the console but not 2 bubbles, the Regex is wrong.
-            // If you DO NOT see <SPLIT> text, the AI ignored the instruction.
-            // console.log("AI Message Content:", m.content); 
-            // ----------------
-
-            // SPLIT LOGIC: Use the exact XML tag
-            const parts = m.content.split('<SPLIT>').filter(part => part.trim() !== '');
+            // Using Markdown Headers to split bubbles (Natural Splitting)
+            const parts = m.content.split(/\n(?=#{2,3} )/).filter(part => part.trim() !== '');
             const bubbles = parts.length > 0 ? parts : [''];
 
             return (
