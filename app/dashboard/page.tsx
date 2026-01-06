@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { 
   Upload, Send, Loader2, X, MessageSquare, 
-  Menu, LogOut, FileText, GripVertical
+  Menu, LogOut, FileText, GripVertical, CloudUpload 
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -36,6 +35,9 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
+  // DRAG & DROP STATE
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  
   // FILES STATE
   const [files, setFiles] = useState<FileData[]>([]);
   const [activeFile, setActiveFile] = useState<FileData | null>(null);
@@ -59,9 +61,7 @@ export default function Dashboard() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
-      // Calculate percentage based on window width
       const newWidth = (e.clientX / window.innerWidth) * 100;
-      // Limit width between 20% and 80%
       if (newWidth > 20 && newWidth < 80) {
         setLeftWidth(newWidth);
       }
@@ -89,13 +89,13 @@ export default function Dashboard() {
 
   const handleBack = () => router.push('/');
 
-  // 3. File Upload (Client + Server)
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
+  // 3. Shared File Processing Logic (Used by both Input and Drag & Drop)
+  const processFiles = async (filesList: File[]) => {
+    if (filesList.length === 0) return;
     setIsUploading(true);
-    const newFilesList = Array.from(e.target.files);
-    
-    for (const file of newFilesList) {
+    setIsDraggingFile(false); // Reset drag state
+
+    for (const file of filesList) {
       // A. Create Blob URL for Instant Viewing
       const fileUrl = URL.createObjectURL(file);
       const newFile: FileData = { name: file.name, url: fileUrl, type: file.type };
@@ -113,34 +113,55 @@ export default function Dashboard() {
     setIsUploading(false);
   };
 
-  // 4. Delete File (Client + Server)
+  // 4. File Input Change
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    processFiles(Array.from(e.target.files));
+  };
+
+  // 5. Drag & Drop Handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingFile(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingFile(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingFile(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(Array.from(e.dataTransfer.files));
+      e.dataTransfer.clearData();
+    }
+  };
+
+  // 6. Delete File
   const handleDeleteFile = async (e: React.MouseEvent, fileName: string) => {
-    e.stopPropagation(); // Prevent activating the tab when clicking delete
-    
-    // A. Remove from UI
+    e.stopPropagation(); 
     const updatedFiles = files.filter(f => f.name !== fileName);
     setFiles(updatedFiles);
     
-    // Switch active file if needed
     if (activeFile?.name === fileName) {
       setActiveFile(updatedFiles.length > 0 ? updatedFiles[updatedFiles.length - 1] : null);
     }
 
-    // B. Tell Chatbot to Forget (Delete Vectors)
     try {
       await fetch('/api/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileName }),
       });
-      // Optional: Add a system message saying memory wiped
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `I have removed "${fileName}" from my memory.` }]);
     } catch (err) {
       console.error("Delete failed", err);
     }
   };
 
-  // 5. Send Message
+  // 7. Send Message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -188,20 +209,27 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
+    <div 
+      className="flex flex-col h-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden"
+      // Global Drop Zone (Optional: allows dropping anywhere)
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       
-      {/* --- TOP BAR (Tabs & Navigation) --- */}
-      <div className="h-14 border-b border-zinc-800 bg-zinc-900/80 flex items-center px-4 justify-between select-none">
+      {/* --- TOP BAR --- */}
+      <div className="h-14 border-b border-zinc-800 bg-zinc-900/80 flex items-center px-4 justify-between select-none z-20">
         
         {/* Left: Document Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 mr-4">
-          <div className="flex items-center gap-2 mr-4">
+          <div className="flex items-center gap-2 mr-4 shrink-0">
              <span className="font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent mr-2">
                 My Docs
              </span>
-             {/* Upload Button (Small) */}
-             <label className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 p-2 rounded-lg text-zinc-400 hover:text-white transition-colors">
-                <Upload size={18} />
+             {/* CLEARER UPLOAD BUTTON */}
+             <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-lg text-white transition-all flex items-center gap-2 text-xs font-semibold shadow-lg shadow-blue-500/20">
+                <Upload size={14} />
+                Upload
                 <input type="file" multiple accept=".pdf,.docx,.pptx" className="hidden" onChange={handleFileUpload} />
              </label>
           </div>
@@ -211,7 +239,7 @@ export default function Dashboard() {
               key={file.name}
               onClick={() => setActiveFile(file)}
               className={`
-                group relative flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition-all min-w-[120px] max-w-[200px]
+                group relative flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition-all min-w-[120px] max-w-[200px] shrink-0
                 ${activeFile?.name === file.name 
                   ? 'bg-blue-600/10 border-blue-500/50 text-blue-400' 
                   : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:bg-zinc-800'}
@@ -219,8 +247,6 @@ export default function Dashboard() {
             >
               <FileText size={14} className="shrink-0" />
               <span className="truncate">{file.name}</span>
-              
-              {/* Delete Button (Visible on Hover) */}
               <button 
                 onClick={(e) => handleDeleteFile(e, file.name)}
                 className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 transition-all bg-zinc-900 shadow-md"
@@ -229,10 +255,6 @@ export default function Dashboard() {
               </button>
             </div>
           ))}
-
-          {files.length === 0 && (
-            <span className="text-zinc-600 text-sm italic">No documents open</span>
-          )}
         </div>
 
         {/* Right: Actions */}
@@ -249,9 +271,17 @@ export default function Dashboard() {
         
         {/* LEFT PANE: Document Viewer */}
         <div 
-          className="bg-zinc-900/30 flex flex-col"
+          className="bg-zinc-900/30 flex flex-col relative"
           style={{ width: `${leftWidth}%` }}
         >
+          {/* DRAG OVERLAY FEEDBACK */}
+          {isDraggingFile && (
+            <div className="absolute inset-0 bg-blue-500/10 border-2 border-dashed border-blue-500 z-50 flex flex-col items-center justify-center backdrop-blur-sm pointer-events-none">
+              <CloudUpload size={64} className="text-blue-400 animate-bounce" />
+              <h2 className="text-xl font-bold text-blue-200 mt-4">Drop files here</h2>
+            </div>
+          )}
+
           {activeFile ? (
             activeFile.type === 'application/pdf' ? (
               <iframe 
@@ -260,16 +290,36 @@ export default function Dashboard() {
                 title="PDF Viewer"
               />
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 gap-4">
+              <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 gap-4 p-8 text-center">
                 <FileText size={48} />
                 <p>Preview not available for this format.</p>
-                <p className="text-xs bg-zinc-800 px-3 py-1 rounded">Try converting to PDF</p>
+                <p className="text-sm text-zinc-600">You can still chat with it!</p>
               </div>
             )
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-zinc-600 gap-4">
-               <Upload size={48} className="opacity-50" />
-               <p>Select or Upload a Document to View</p>
+            // --- EMPTY STATE / DROP ZONE ---
+            <div className="flex-1 flex flex-col items-center justify-center text-zinc-600 gap-6 p-8">
+               <div className="w-24 h-24 bg-zinc-800/50 rounded-full flex items-center justify-center border-2 border-dashed border-zinc-700">
+                  <CloudUpload size={48} className="text-zinc-500" />
+               </div>
+               <div className="text-center space-y-2">
+                 <h3 className="text-xl font-semibold text-zinc-300">Upload your documents</h3>
+                 <p className="text-sm max-w-xs mx-auto">Drag & drop files here, or click the button below.</p>
+               </div>
+               
+               {/* BIG CLEAR BUTTON */}
+               <label className={`
+                  flex items-center gap-2 px-6 py-3 rounded-xl font-bold cursor-pointer transition-all hover:scale-105
+                  ${isUploading 
+                    ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'}
+               `}>
+                 {isUploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
+                 {isUploading ? 'Processing...' : 'Select Files'}
+                 <input type="file" multiple accept=".pdf,.docx,.pptx" className="hidden" onChange={handleFileUpload} disabled={isUploading}/>
+               </label>
+
+               <p className="text-xs text-zinc-700 mt-4">Supports PDF, DOCX, PPTX</p>
             </div>
           )}
         </div>
